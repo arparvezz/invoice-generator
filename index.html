@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Invoice Studio</title>
+  <meta name="description" content="Create clean, modern invoices and export them as PDF, JPG or PNG. Runs entirely in your browser." />
+  <meta name="theme-color" content="#f5f5f7" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d1d1f'/%3E%3Cpath d='M20 18h24M20 28h24M20 38h14' stroke='%23fff' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Mrs+Saint+Delafield&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Invoice Studio</span>
+    </div>
+    <nav class="actions">
+      <button class="btn ghost" id="btnNew" title="Start a new invoice (keeps your business details)">New</button>
+      <button class="btn ghost" id="btnSaveJson" title="Download a backup of this invoice">Save</button>
+      <label class="btn ghost" title="Open a saved invoice backup (.json)">
+        Open<input type="file" id="fileJson" accept="application/json,.json" hidden />
+      </label>
+      <button class="btn ghost hide-sm" id="btnPrint">Print</button>
+      <div class="split">
+        <button class="btn primary" id="btnPdf">Download PDF</button>
+        <button class="btn secondary" id="btnJpg">JPG</button>
+        <button class="btn secondary" id="btnPng">PNG</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <!-- ============ EDITOR ============ -->
+    <section class="editor" aria-label="Invoice editor">
+
+      <details class="card" open>
+        <summary>Your business</summary>
+        <div class="card-body">
+          <div class="logo-row">
+            <div class="logo-drop" id="logoDrop" tabindex="0" role="button" aria-label="Upload logo">
+              <img id="logoPreview" alt="" hidden />
+              <span id="logoHint">Add logo<br /><small>PNG, JPG or SVG</small></span>
+              <input type="file" id="logoInput" accept="image/*" hidden />
+            </div>
+            <div class="logo-controls">
+              <label class="field">
+                <span>Logo size</span>
+                <input type="range" min="28" max="120" step="2" data-bind="style.logoHeight" />
+              </label>
+              <label class="check"><input type="checkbox" data-bind="style.showNameWithLogo" /> Show business name next to logo</label>
+              <button class="link danger" id="logoRemove" type="button" hidden>Remove logo</button>
+            </div>
+          </div>
+          <div class="grid2">
+            <label class="field span2"><span>Business name</span><input data-bind="business.name" placeholder="Your Company Ltd" /></label>
+            <label class="field"><span>Email</span><input type="email" data-bind="business.email" /></label>
+            <label class="field"><span>Phone</span><input data-bind="business.phone" /></label>
+            <label class="field span2"><span>Address</span><textarea rows="3" data-bind="business.address"></textarea></label>
+            <label class="field"><span>Website</span><input data-bind="business.website" /></label>
+            <label class="field"><span>Tax / VAT / Reg. no.</span><input data-bind="business.taxId" /></label>
+          </div>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary>Client</summary>
+        <div class="card-body">
+          <div class="grid2">
+            <label class="field"><span>Client name</span><input data-bind="client.name" /></label>
+            <label class="field"><span>Company</span><input data-bind="client.company" /></label>
+            <label class="field"><span>Email</span><input type="email" data-bind="client.email" /></label>
+            <label class="field"><span>Phone</span><input data-bind="client.phone" /></label>
+            <label class="field span2"><span>Billing address</span><textarea rows="3" data-bind="client.address"></textarea></label>
+            <label class="field"><span>Client tax / VAT no.</span><input data-bind="client.taxId" /></label>
+            <div class="field"><span>&nbsp;</span><label class="check"><input type="checkbox" data-bind="shipTo.enabled" /> Different shipping address</label></div>
+            <label class="field span2" data-show="shipTo.enabled"><span>Ship to</span><textarea rows="3" data-bind="shipTo.address"></textarea></label>
+          </div>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary>Invoice details</summary>
+        <div class="card-body">
+          <div class="grid2">
+            <label class="field"><span>Document title</span>
+              <select data-bind="meta.title">
+                <option>Invoice</option><option>Tax Invoice</option><option>Proforma Invoice</option>
+                <option>Commercial Invoice</option><option>Quote</option><option>Estimate</option>
+                <option>Receipt</option><option>Credit Note</option>
+              </select>
+            </label>
+            <label class="field"><span>Invoice number</span><input data-bind="meta.number" /></label>
+            <label class="field"><span>Issue date</span><input type="date" data-bind="meta.issueDate" /></label>
+            <label class="field"><span>Due date</span><input type="date" data-bind="meta.dueDate" /></label>
+            <label class="field"><span>Payment terms</span>
+              <select id="termsQuick">
+                <option value="">Custom</option>
+                <option value="0">Due on receipt</option>
+                <option value="7">Net 7</option>
+                <option value="14">Net 14</option>
+                <option value="30">Net 30</option>
+                <option value="60">Net 60</option>
+              </select>
+            </label>
+            <label class="field"><span>PO / Reference</span><input data-bind="meta.reference" /></label>
+            <label class="field"><span>Currency</span><select data-bind="meta.currency" id="currencySelect"></select></label>
+            <label class="field"><span>Date format</span>
+              <select data-bind="meta.locale">
+                <option value="en-US">Oct 24, 2026 (US)</option>
+                <option value="en-GB">24 Oct 2026 (UK)</option>
+                <option value="iso">2026-10-24 (ISO)</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary>Line items</summary>
+        <div class="card-body">
+          <div class="items-head" aria-hidden="true">
+            <span>Description</span><span>Qty</span><span>Rate</span><span>Amount</span><span></span>
+          </div>
+          <div id="itemsList" class="items"></div>
+          <button class="btn add" id="btnAddItem" type="button">+ Add item</button>
+          <label class="check mt"><input type="checkbox" data-bind="style.showSku" /> Show SKU / item code column</label>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary>Totals</summary>
+        <div class="card-body">
+          <div class="grid2">
+            <label class="field"><span>Discount</span>
+              <div class="combo">
+                <input type="number" step="any" min="0" data-bind="totals.discountValue" data-num />
+                <select data-bind="totals.discountType"><option value="percent">%</option><option value="fixed">Fixed</option></select>
+              </div>
+            </label>
+            <label class="field"><span>Shipping / handling</span><input type="number" step="any" min="0" data-bind="totals.shipping" data-num /></label>
+            <label class="field"><span>Tax label</span><input data-bind="totals.taxLabel" placeholder="Tax, VAT, GST…" /></label>
+            <label class="field"><span>Tax rate (%)</span><input type="number" step="any" min="0" data-bind="totals.taxRate" data-num /></label>
+            <label class="field"><span>Amount already paid</span><input type="number" step="any" min="0" data-bind="totals.amountPaid" data-num /></label>
+            <label class="field"><span>Status stamp</span>
+              <select data-bind="style.status">
+                <option value="none">None</option><option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option><option value="due">Due</option>
+                <option value="overdue">Overdue</option><option value="draft">Draft</option>
+              </select>
+            </label>
+          </div>
+          <div class="totals-mini" id="totalsMini"></div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Payment, notes & terms</summary>
+        <div class="card-body">
+          <label class="field"><span>Payment details</span><textarea rows="4" data-bind="payment.details" placeholder="Bank name, account name, account number, sort code / routing, IBAN, SWIFT, PayPal…"></textarea></label>
+          <label class="field"><span>Notes</span><textarea rows="2" data-bind="notes"></textarea></label>
+          <label class="field"><span>Terms & conditions</span><textarea rows="3" data-bind="terms"></textarea></label>
+          <label class="field"><span>Footer line</span><input data-bind="footer" /></label>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Signature <small class="opt">optional</small></summary>
+        <div class="card-body">
+          <label class="check"><input type="checkbox" data-bind="signature.enabled" /> Add a signature to this invoice</label>
+          <div data-show="signature.enabled" class="sig-wrap">
+            <div class="segmented" role="tablist">
+              <button type="button" data-sigmode="draw">Draw</button>
+              <button type="button" data-sigmode="type">Type</button>
+              <button type="button" data-sigmode="upload">Upload</button>
+            </div>
+            <div class="sig-pane" data-pane="draw">
+              <canvas id="sigCanvas" class="sig-canvas" aria-label="Signature drawing area"></canvas>
+              <div class="row-actions">
+                <button class="link" type="button" id="sigClear">Clear</button>
+                <span class="hint">Sign with mouse, trackpad or finger</span>
+              </div>
+            </div>
+            <div class="sig-pane" data-pane="type">
+              <label class="field"><span>Type your name</span><input data-bind="signature.typed" /></label>
+            </div>
+            <div class="sig-pane" data-pane="upload">
+              <label class="btn ghost">Choose signature image<input type="file" id="sigUpload" accept="image/*" hidden /></label>
+              <span class="hint">Transparent PNG works best</span>
+            </div>
+            <div class="grid2 mt">
+              <label class="field"><span>Signer name</span><input data-bind="signature.name" /></label>
+              <label class="field"><span>Title</span><input data-bind="signature.title" /></label>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary>Appearance</summary>
+        <div class="card-body">
+          <div class="grid2">
+            <label class="field"><span>Paper size</span>
+              <select data-bind="style.paper"><option value="a4">A4</option><option value="letter">US Letter</option></select>
+            </label>
+            <div class="field"><span>Accent colour</span>
+              <div class="swatches" id="swatches"></div>
+            </div>
+          </div>
+          <button class="link danger mt" id="btnReset" type="button">Reset everything</button>
+        </div>
+      </details>
+
+      <p class="privacy">Everything stays in this browser. Nothing is uploaded to a server.</p>
+    </section>
+
+    <!-- ============ PREVIEW ============ -->
+    <section class="stage" aria-label="Invoice preview">
+      <div class="stage-inner" id="stage">
+        <div class="paper-scaler" id="paperScaler">
+          <article class="paper" id="paper"></article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/html2canvas.min.js"></script>
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
