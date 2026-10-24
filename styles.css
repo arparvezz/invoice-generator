@@ -154,6 +154,8 @@ input[type=range] { width: 100%; accent-color: var(--blue); }
 .logo-controls .field { width: 100%; }
 
 /* ---------- Line items editor ---------- */
+.sub-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.labels-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .items-head, .item-row {
   display: grid; grid-template-columns: 1fr 58px 84px 84px 26px; gap: 6px; align-items: start;
 }
@@ -288,6 +290,9 @@ table.inv-items { width: 100%; border-collapse: collapse; margin-top: 4px; font-
 .inv-foot .accent-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: 1px; }
 
 .inv-due { position: relative; }
+.inv-due.compact { justify-content: flex-start; align-items: flex-start; gap: 48px; margin-top: 36px; padding-bottom: 20px; }
+.inv-due.compact .val { font-size: 13px; font-weight: 500; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.inv-due.compact .stamp { left: auto; right: 0; transform: translate(0, -60%) rotate(-8deg); }
 .stamp {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%) rotate(-8deg);
   padding: 6px 16px; border: 2.5px solid currentColor; border-radius: 10px;

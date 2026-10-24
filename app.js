@@ -13,6 +13,7 @@
     ['INR', 'Indian Rupee'], ['PKR', 'Pakistani Rupee'], ['CHF', 'Swiss Franc'], ['SEK', 'Swedish Krona'],
     ['SGD', 'Singapore Dollar'], ['JPY', 'Japanese Yen'], ['CNY', 'Chinese Yuan'],
   ];
+  const DEFAULT_LABELS = { sku: 'SKU', desc: 'Description', qty: 'Qty', rate: 'Rate', amount: 'Amount' };
   const ACCENTS = ['#0071e3', '#1d1d1f', '#34c759', '#ff9500', '#ff2d55', '#af52de', '#5856d6', '#00a3a3'];
 
   /* ---------- Helpers ---------- */
@@ -59,7 +60,8 @@
       terms: 'Payment is due by the date above. Please include the invoice number with your payment.',
       footer: '',
       signature: { enabled: false, mode: 'draw', image: '', typed: '', name: '', title: '' },
-      style: { accent: '#0071e3', paper: 'a4', status: 'none', logoHeight: 56, showNameWithLogo: false, showSku: false, fitOnePage: true },
+      style: { accent: '#0071e3', paper: 'a4', status: 'none', logoHeight: 56, showNameWithLogo: false, showSku: false, fitOnePage: true, showSummary: true },
+      labels: { ...DEFAULT_LABELS },
     };
   }
 
@@ -194,6 +196,13 @@
       ? `<div class="stamp ${esc(s.style.status)}">${esc(s.style.status)}</div>` : '';
 
     const dueLabel = c.paid > 0 ? 'Balance due' : 'Amount due';
+    const metaPairs = [
+      ['Issue date', esc(fmtDate(s.meta.issueDate))],
+      s.meta.dueDate && ['Due date', esc(fmtDate(s.meta.dueDate))],
+      s.meta.reference && ['Reference', esc(s.meta.reference)],
+      ['Currency', esc(s.meta.currency)],
+    ].filter(Boolean);
+    const L = (k) => esc((s.labels && s.labels[k] && s.labels[k].trim()) || DEFAULT_LABELS[k]);
     const footerText = s.footer || [b.name, b.website, b.email].filter(Boolean).join('  ·  ');
 
     paper.innerHTML = `
@@ -205,6 +214,7 @@
         </div>
       </header>
 
+      ${s.style.showSummary !== false ? `
       <section class="inv-due" data-break>
         ${stamp}
         <div>
@@ -213,18 +223,19 @@
           ${s.meta.dueDate ? `<div class="sub">Due ${esc(fmtDate(s.meta.dueDate))}</div>` : ''}
         </div>
         <dl class="inv-dates">
-          <dt>Issue date</dt><dd>${esc(fmtDate(s.meta.issueDate))}</dd>
-          ${s.meta.dueDate ? `<dt>Due date</dt><dd>${esc(fmtDate(s.meta.dueDate))}</dd>` : ''}
-          ${s.meta.reference ? `<dt>Reference</dt><dd>${esc(s.meta.reference)}</dd>` : ''}
-          <dt>Currency</dt><dd>${esc(s.meta.currency)}</dd>
+          ${metaPairs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}
         </dl>
-      </section>
+      </section>` : `
+      <section class="inv-due compact" data-break>
+        ${stamp}
+        ${metaPairs.map(([k, v]) => `<div><div class="label">${k}</div><div class="val">${v}</div></div>`).join('')}
+      </section>`}
 
       <section class="inv-parties" style="--cols:${cols}" data-break>${from}${billTo}${shipTo}</section>
 
       <table class="inv-items">
         <thead><tr>
-          ${sku ? '<th>SKU</th>' : ''}<th>Description</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th>
+          ${sku ? `<th>${L('sku')}</th>` : ''}<th>${L('desc')}</th><th class="r">${L('qty')}</th><th class="r">${L('rate')}</th><th class="r">${L('amount')}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -250,6 +261,8 @@
       </footer>`;
 
     renderTotalsMini(c);
+    const eh = $$('.items-head span');
+    ['desc', 'qty', 'rate', 'amount'].forEach((k, i) => { if (eh[i]) eh[i].textContent = (s.labels[k] || '').trim() || DEFAULT_LABELS[k]; });
     fitPreview();
     updatePageGuides();
   }
@@ -651,6 +664,10 @@
   $('#btnReset').addEventListener('click', () => {
     if (!confirm('Reset everything, including your logo and business details?')) return;
     state = defaults(); syncForm(); save(); render(); sizeSigCanvas();
+  });
+
+  $('#btnResetLabels').addEventListener('click', () => {
+    state.labels = { ...DEFAULT_LABELS }; syncForm(); save(); render();
   });
 
   /* ---------- Toast ---------- */

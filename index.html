@@ -128,6 +128,14 @@
           <div id="itemsList" class="items"></div>
           <button class="btn add" id="btnAddItem" type="button">+ Add item</button>
           <label class="check mt"><input type="checkbox" data-bind="style.showSku" /> Show SKU / item code column</label>
+          <div class="sub-head mt"><span>Column labels</span><button class="link" type="button" id="btnResetLabels">Reset</button></div>
+          <div class="labels-grid">
+            <label class="field" data-show="style.showSku"><span>SKU column</span><input data-bind="labels.sku" placeholder="SKU" /></label>
+            <label class="field"><span>Description column</span><input data-bind="labels.desc" placeholder="Description" /></label>
+            <label class="field"><span>Quantity column</span><input data-bind="labels.qty" placeholder="Qty" /></label>
+            <label class="field"><span>Rate column</span><input data-bind="labels.rate" placeholder="Rate" /></label>
+            <label class="field"><span>Amount column</span><input data-bind="labels.amount" placeholder="Amount" /></label>
+          </div>
         </div>
       </details>
 
@@ -210,6 +218,7 @@
               <div class="swatches" id="swatches"></div>
             </div>
           </div>
+          <label class="check mt"><input type="checkbox" data-bind="style.showSummary" /> Show amount-due summary in header</label>
           <label class="check mt"><input type="checkbox" data-bind="style.fitOnePage" /> Shrink slightly to keep a nearly-full invoice on one page</label>
           <button class="link danger mt" id="btnReset" type="button" style="display:block">Reset everything</button>
         </div>
