@@ -29,4 +29,3 @@ Open `index.html` in a browser, or run `npx serve .` in this folder.
 - Invoices are saved only in the browser you used (localStorage). Use **Save** to keep `.json` backups and **Open** to reload them on another device.
 - Fonts: uses Apple's system font (SF Pro) on Mac/iPhone and Inter as a close match on Windows/Android.
 - Libraries bundled in `vendor/`: html2canvas 1.4.1 and jsPDF 2.5.2 (both MIT licensed).
-# invoice-generator

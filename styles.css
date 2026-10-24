@@ -87,7 +87,12 @@ body {
 .editor { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .stage { position: sticky; top: 76px; min-width: 0; }
 .stage-inner { width: 100%; }
-.paper-scaler { transform-origin: top left; }
+.paper-scaler { transform-origin: top left; position: relative; }
+.page-info { font-size: 12px; font-weight: 500; color: var(--text-2); margin: 0 0 10px 2px; }
+.page-info.warn { color: #bf6a02; }
+.page-guides { position: absolute; inset: 0; pointer-events: none; }
+.page-guide { position: absolute; left: -12px; right: -12px; border-top: 2px dashed #ff9500; }
+.page-guide span { position: absolute; right: 12px; top: -11px; background: #ff9500; color: #fff; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 980px; }
 
 /* ---------- Cards ---------- */
 .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
@@ -294,6 +299,9 @@ table.inv-items { width: 100%; border-collapse: collapse; margin-top: 4px; font-
 .stamp.due { color: #bf6a02; }
 .stamp.draft { color: #86868b; }
 
+/* Keep preview identical to export: html2canvas mis-measures text with letter-spacing */
+.paper, .paper * { letter-spacing: 0 !important; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1020px) {
   .layout { grid-template-columns: 1fr; padding: 16px; }
@@ -321,4 +329,5 @@ table.inv-items { width: 100%; border-collapse: collapse; margin-top: 4px; font-
   .stage { position: static; }
   .paper-scaler { transform: none !important; height: auto !important; }
   .paper { box-shadow: none; border-radius: 0; }
+  .page-guides, .page-info { display: none !important; }
 }

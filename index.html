@@ -210,7 +210,8 @@
               <div class="swatches" id="swatches"></div>
             </div>
           </div>
-          <button class="link danger mt" id="btnReset" type="button">Reset everything</button>
+          <label class="check mt"><input type="checkbox" data-bind="style.fitOnePage" /> Shrink slightly to keep a nearly-full invoice on one page</label>
+          <button class="link danger mt" id="btnReset" type="button" style="display:block">Reset everything</button>
         </div>
       </details>
 
@@ -219,9 +220,11 @@
 
     <!-- ============ PREVIEW ============ -->
     <section class="stage" aria-label="Invoice preview">
+      <div class="page-info" id="pageInfo"></div>
       <div class="stage-inner" id="stage">
         <div class="paper-scaler" id="paperScaler">
           <article class="paper" id="paper"></article>
+          <div class="page-guides" id="pageGuides" aria-hidden="true"></div>
         </div>
       </div>
     </section>

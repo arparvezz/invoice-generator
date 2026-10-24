@@ -59,7 +59,7 @@
       terms: 'Payment is due by the date above. Please include the invoice number with your payment.',
       footer: '',
       signature: { enabled: false, mode: 'draw', image: '', typed: '', name: '', title: '' },
-      style: { accent: '#0071e3', paper: 'a4', status: 'none', logoHeight: 56, showNameWithLogo: false, showSku: false },
+      style: { accent: '#0071e3', paper: 'a4', status: 'none', logoHeight: 56, showNameWithLogo: false, showSku: false, fitOnePage: true },
     };
   }
 
@@ -251,6 +251,7 @@
 
     renderTotalsMini(c);
     fitPreview();
+    updatePageGuides();
   }
   const fmtQty = (q) => { const n = num(q); return Number.isInteger(n) ? String(n) : String(+n.toFixed(4)); };
 
@@ -500,10 +501,7 @@
         const sc = doc.getElementById('paperScaler');
         sc.style.transform = 'none'; sc.style.height = 'auto';
         const p = doc.getElementById('paper'); p.style.boxShadow = 'none'; p.style.borderRadius = '0';
-        // html2canvas draws glyph-by-glyph when letter-spacing is set, which causes uneven gaps in numbers.
-        const st = doc.createElement('style');
-        st.textContent = '#paper, #paper * { letter-spacing: 0 !important; }';
-        doc.head.appendChild(st);
+        const g = doc.getElementById('pageGuides'); if (g) g.remove();
       },
     });
   }
@@ -520,43 +518,76 @@
     finally { btn.disabled = false; btn.textContent = old; }
   }
 
-  async function exportPdf() {
+  /* ---------- Pagination (shared by preview + PDF so they always match) ---------- */
+  const FIT_TOLERANCE = 0.12;   // shrink up to 12% to keep a "nearly one page" invoice on one page
+  const CONT_TOP = 56;          // top margin on continuation pages (CSS px)
+
+  function planPages() {
     const key = PAPER[state.style.paper] ? state.style.paper : 'a4';
     const P = PAPER[key];
-    const breaks = breakPoints();
-    const canvas = await capture(2.5);
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit: 'pt', format: P.pdf, orientation: 'portrait', compress: true });
-    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
     const cssW = paper.offsetWidth, cssH = paper.offsetHeight;
-    const k = canvas.width / cssW;          // canvas px per CSS px
-    const ptPerCss = pw / cssW;              // PDF pt per CSS px
-    const pageCss = ph / ptPerCss;           // page height in CSS px
-    const contTop = 56;                      // top margin on continuation pages (CSS px)
-
-    let start = 0, page = 0;
-    while (start < cssH - 1) {
-      const offset = page === 0 ? 0 : contTop;
+    const pageCss = P.h * cssW / P.w;
+    if (cssH <= pageCss + 2) return { key, mode: 'single', scale: 1, pageCss, pages: [{ start: 0, end: cssH, offset: 0 }] };
+    if (state.style.fitOnePage !== false && cssH <= pageCss * (1 + FIT_TOLERANCE)) {
+      return { key, mode: 'fit', scale: pageCss / cssH, pageCss, pages: [{ start: 0, end: cssH, offset: 0 }] };
+    }
+    const breaks = breakPoints();
+    const pages = [];
+    let start = 0;
+    while (start < cssH - 2) {
+      const offset = pages.length ? CONT_TOP : 0;
       const room = pageCss - offset;
       let end = start + room;
-      if (end >= cssH - 1) end = cssH;
+      if (end >= cssH - 2) end = cssH;
       else {
         const safe = breaks.filter((y) => y > start + room * 0.4 && y <= end);
         if (safe.length) end = safe[safe.length - 1];
       }
+      pages.push({ start, end, offset });
+      start = end;
+    }
+    return { key, mode: 'multi', scale: 1, pageCss, pages };
+  }
+
+  function updatePageGuides() {
+    const plan = planPages();
+    const guides = $('#pageGuides');
+    guides.innerHTML = plan.mode === 'multi'
+      ? plan.pages.slice(1).map((pg, i) => `<div class="page-guide" style="top:${pg.start}px"><span>Page ${i + 2} starts here</span></div>`).join('')
+      : '';
+    const info = $('#pageInfo');
+    const size = plan.key === 'letter' ? 'US Letter' : 'A4';
+    if (plan.mode === 'single') { info.textContent = `1 page · ${size}`; info.className = 'page-info'; }
+    else if (plan.mode === 'fit') { info.textContent = `1 page · ${size} · content scaled to ${Math.round(plan.scale * 100)}% to fit`; info.className = 'page-info warn'; }
+    else { info.textContent = `${plan.pages.length} pages · ${size}`; info.className = 'page-info warn'; }
+  }
+
+  async function exportPdf() {
+    const plan = planPages();
+    const P = PAPER[plan.key];
+    const canvas = await capture(2.5);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'pt', format: P.pdf, orientation: 'portrait', compress: true });
+    const pw = pdf.internal.pageSize.getWidth();
+    const cssW = paper.offsetWidth;
+    const k = canvas.width / cssW;           // canvas px per CSS px
+    const ptPerCss = pw / cssW;              // PDF pt per CSS px
+
+    plan.pages.forEach((pg, i) => {
       const slice = document.createElement('canvas');
       slice.width = canvas.width;
-      slice.height = Math.round((end - start) * k);
-      const sctx2 = slice.getContext('2d');
-      sctx2.fillStyle = '#fff'; sctx2.fillRect(0, 0, slice.width, slice.height);
-      sctx2.drawImage(canvas, 0, Math.round(start * k), canvas.width, slice.height, 0, 0, slice.width, slice.height);
-      if (page > 0) pdf.addPage(P.pdf, 'portrait');
-      pdf.addImage(slice.toDataURL('image/jpeg', 0.95), 'JPEG', 0, offset * ptPerCss, pw, (end - start) * ptPerCss, undefined, 'FAST');
-      start = end; page++;
-    }
+      slice.height = Math.min(Math.round((pg.end - pg.start) * k), canvas.height - Math.round(pg.start * k));
+      const c2 = slice.getContext('2d');
+      c2.fillStyle = '#fff'; c2.fillRect(0, 0, slice.width, slice.height);
+      c2.drawImage(canvas, 0, Math.round(pg.start * k), canvas.width, slice.height, 0, 0, slice.width, slice.height);
+      if (i > 0) pdf.addPage(P.pdf, 'portrait');
+      const w = pw * plan.scale;
+      const h = (slice.height / k) * ptPerCss * plan.scale;
+      pdf.addImage(slice.toDataURL('image/jpeg', 0.95), 'JPEG', (pw - w) / 2, pg.offset * ptPerCss, w, h, undefined, 'FAST');
+    });
     pdf.setProperties({ title: `${state.meta.title} ${state.meta.number}`, author: state.business.name, creator: 'Invoice Studio' });
     pdf.save(fileBase() + '.pdf');
-    toast(page > 1 ? `PDF saved (${page} pages)` : 'PDF saved');
+    toast(plan.pages.length > 1 ? `PDF saved (${plan.pages.length} pages)` : 'PDF saved');
   }
 
   async function exportImage(type) {
@@ -633,7 +664,7 @@
   syncForm();
   render();
   requestAnimationFrame(sizeSigCanvas);
-  if (document.fonts) document.fonts.ready.then(() => fitPreview());
+  if (document.fonts) document.fonts.ready.then(() => { fitPreview(); updatePageGuides(); });
   window.addEventListener('beforeprint', () => { scaler.style.transform = 'none'; });
   window.addEventListener('afterprint', fitPreview);
 })();
